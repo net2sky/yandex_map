@@ -1,0 +1,174 @@
+<?php
+/**
+ * TODO: права доступа к карте
+ * TODO: меню для админки
+ * TODO: проверить код, переписать некоторые запросы в нормальный вид
+ * TODO: возможность увеличения карты под точку
+ * TODO: безопасные параметры?
+ * TODO: переименовать файл шаблонов и вывести туда необходимые переменные
+ */
+function yandex_map_menu() {
+    $items = array();
+
+    $items['ymap/map'] = array(
+        'page callback' => 'json_get',
+        'type' => MENU_NORMAL_ITEM,
+        'title' => 'JSON encode',
+        'access callback' => TRUE
+    );
+
+    $items['admin/config/ymaps'] = array(
+        'page callback' => 'ymaps_admin',
+        'type' => MENU_NORMAL_ITEM,
+        'title' => t('Administer ymaps'),
+        'access callback' => true
+    );
+
+    return $items;
+}
+
+function yandex_map_permission() {
+    return array(
+        'administer yandex map' => array(
+            'title' => t('Administer yandex map')
+        ),
+
+        'view yandex map' => array(
+            'title' => t('View yandex map')
+        ),
+
+        'edit yandex map' => array(
+            'title' => t('Edit yandex map')
+        ),
+    );
+}
+
+function ymaps_admin() {
+    return drupal_get_form('ymaps_admin_form');
+}
+
+function ymaps_admin_form() {
+    $form = array();
+
+    $form['city_field'] = array(
+        '#type' => 'textfield',
+        '#title' => 'Type city field',
+        '#value' => db_query("SELECT city_field FROM {yandex_map} WHERE id = 1")->fetchField()
+    );
+
+    $form['address_field'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Введите название CCK поля для адреса'),
+        '#value' => db_query("SELECT address_field FROM {yandex_map} WHERE id = 1")->fetchField()
+    );
+
+    $form['api_key'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Введите API ключ для полученный в аккаунте Yandex карт'),
+        '#value' => db_query("SELECT api_key FROM {yandex_map} WHERE id = 1")->fetchField()
+    );
+
+    $form['submit'] = array(
+        '#type' => 'submit',
+        '#value' => t('Сохранить')
+    );
+
+    return $form;
+}
+
+function ymaps_admin_form_submit($form, &$form_state) {
+    db_update('yandex_map')
+        ->fields(array(
+            'city_field' => $form_state['input']['city_field'],
+            'address_field' => $form_state['input']['address_field'],
+            'api_key' => $form_state['input']['api_key']
+        ))
+        ->condition('id', 1, '=')
+        ->execute();
+}
+
+function get_geo_coordinates($address) {
+    $params = array(
+        'geocode' => $address,
+        'format' => 'json',
+        'results' => 1,
+        'key' => db_query("SELECT api_key FROM {yandex_map} WHERE id=1")->fetchField()
+    );
+
+    $response = json_decode(file_get_contents('http://geocode-maps.yandex.ru/1.x/?' . http_build_query($params, '', '&')));
+    if ($response->response->GeoObjectCollection->metaDataProperty->GeocoderResponseMetaData->found > 0)
+    {
+        $result = explode(" ", $response->response->GeoObjectCollection->featureMember[0]->GeoObject->Point->pos);
+        return $result;
+    }
+    else
+    {
+        return FALSE;
+    }
+
+}
+
+function yandex_map_theme($existing, $type, $theme, $path) {
+    $path = drupal_get_path('module', 'yandex_map') . '/theme';
+    if($type == 'module') {
+        return array(
+            'yandex_map_profile' => array(
+                'template' => 'user-profile-test',
+                'arguments' => array('fields' => NULL),
+                'path' => $path
+            )
+        );
+    }
+
+    return array();
+}
+
+function yandex_map_user_view($account) {
+    $account->content['yandex_map'] = array(
+        '#markup' => theme('yandex_map_profile', array('myvar' => $account)),
+    );
+
+    return $account;
+}
+
+function yandex_map_html_head_alter(&$head_elements) {
+    if($account = menu_get_object('user'))
+        drupal_add_js('var uid=' . $account->uid . ';', 'inline');
+    drupal_add_js('http://api-maps.yandex.ru/2.0/?load=package.full&lang=ru-RU', 'external');
+    drupal_add_js(drupal_get_path('module', 'yandex_map') . '/scripts/map.js');
+}
+
+function field_get_user($fieldname, $user_id) {
+    $field_name = 'field_data_' . $fieldname;
+    $field_value_name = $fieldname . '_value';
+    $fields = db_select($field_name, $field_value_name)
+        ->fields($field_value_name)
+        ->condition('entity_id', $user_id, '=')
+        ->execute()
+        ->fetchAssoc();
+    
+    return $fields[$fieldname . '_value'];
+}
+
+function json_get($uid) {
+    $user = user_load($uid);
+
+    $fields = db_select('yandex_map', 'city_field')
+        ->fields('city_field')
+        ->condition('id', 1, '=')
+        ->execute()
+        ->fetchAssoc();
+
+    $address = field_get_user($fields['address_field'], $uid);
+    $city = field_get_user($fields['city_field'], $uid);
+
+    $json['city'] = get_geo_coordinates($city);
+
+    $json['address'] = get_geo_coordinates($address);
+
+    $json['address_raw'] = $address;
+
+
+    echo drupal_json_encode($json);
+}
+
