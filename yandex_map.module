@@ -7,6 +7,10 @@
  * TODO: безопасные параметры?
  * TODO: переименовать файл шаблонов и вывести туда необходимые переменные
  */
+
+/**
+ * Implements hook_menu().
+ */
 function yandex_map_menu() {
   $items = array();
 
@@ -106,6 +110,9 @@ function get_geo_coordinates($address) {
 
 }
 
+/**
+ * Implements hook_theme().
+ */
 function yandex_map_theme($existing, $type, $theme, $path) {
   $path = drupal_get_path('module', 'yandex_map') . '/theme';
   if ($type == 'module') {
@@ -121,6 +128,9 @@ function yandex_map_theme($existing, $type, $theme, $path) {
   return array();
 }
 
+/*
+ * Implements hook_user_view().
+ */
 function yandex_map_user_view($account) {
   $account->content['yandex_map'] = array(
     '#markup' => theme('yandex_map_profile', array('myvar' => $account)),
