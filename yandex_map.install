@@ -1,46 +1,46 @@
 <?php
 
 function yandex_map_install() {
-    db_insert('yandex_map')
-        ->fields(array(
-            'id' => 1,
-            'city_field' => 'enter city field here',
-            'address_field' => 'enter address field here',
-            'api_key' => 'enter api key here'
-        ))
-        ->execute();
+  db_insert('yandex_map')
+    ->fields(array(
+      'id' => 1,
+      'city_field' => 'enter city field here',
+      'address_field' => 'enter address field here',
+      'api_key' => 'enter api key here'
+    ))
+    ->execute();
 }
 
 function yandex_map_schema() {
-    $schema['yandex_map'] = array(
-        'description' => 'The base table for yandex map.',
-        'fields' => array(
-            'id' => array(
-                'type' => 'int',
-                'unsigned' => true,
-                'not null' => true,
-                'default' => 0
-            ),
+  $schema['yandex_map'] = array(
+    'description' => 'The base table for yandex map.',
+    'fields' => array(
+      'id' => array(
+        'type' => 'int',
+        'unsigned' => true,
+        'not null' => true,
+        'default' => 0
+      ),
 
-            'city_field' => array(
-                'type' => 'varchar',
-                'not null' => true,
-                'length' => 255
-            ),
+      'city_field' => array(
+        'type' => 'varchar',
+        'not null' => true,
+        'length' => 255
+      ),
 
-            'address_field' => array(
-                'type' => 'varchar',
-                'length' => 255,
-                'not null' => true
-            ),
+      'address_field' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => true
+      ),
 
-            'api_key' => array(
-                'type' => 'varchar',
-                'length' => 255,
-                'not null' => true
-            ),
-        ), 'primary key' => array('id')
-    );
+      'api_key' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => true
+      ),
+    ), 'primary key' => array('id')
+  );
 
-    return $schema;
+  return $schema;
 }
